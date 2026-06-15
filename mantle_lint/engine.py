@@ -36,6 +36,11 @@ class Finding:
     message: str
     recommendation: str
     references: List[str] = field(default_factory=list)
+    # Optional AI-triage annotations (populated only when --ai is on). When None,
+    # output is identical to the deterministic-only run.
+    ai_exploitability: Optional[str] = None   # "low" | "medium" | "high"
+    ai_reason: Optional[str] = None           # one-line justification
+    ai_patch: Optional[str] = None            # reviewable unified diff (suggestion)
 
 
 @dataclass

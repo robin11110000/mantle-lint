@@ -75,6 +75,28 @@ The scanner is comment- and string-aware, so it never matches inside a `//` comm
 
 ---
 
+## AI triage layer (optional, `--ai`)
+
+The deterministic rules above are the **ground truth**. With the optional `--ai` flag, each *already-confirmed* finding is sent — with its surrounding code — to a **self-hosted, OpenAI-compatible endpoint** (e.g. vLLM or Ollama on Tencent Cloud HAI/CVM) and annotated with:
+
+- an **exploitability ranking** (`low` / `medium` / `high`) and a one-line reason for *this* contract, and
+- a **reviewable unified-diff patch suggestion** scoped to this finding.
+
+The AI **never invents findings** — it only annotates the deterministic ones. Patches are **suggestions for human review, never auto-applied** (see *Honest limitations*). Output is reproducible (temperature 0 + an on-disk response cache), and the layer **degrades gracefully**: if the endpoint is down it prints a warning and falls back to deterministic-only output rather than crashing.
+
+```bash
+export MANTLE_LINT_AI_BASE_URL=http://<your-tencent-host>:8000/v1   # required with --ai
+export MANTLE_LINT_AI_MODEL=<model-id-your-endpoint-serves>          # required with --ai
+export MANTLE_LINT_AI_API_KEY=<token>                                # optional (self-hosted may not need one)
+# optional: MANTLE_LINT_AI_TIMEOUT (seconds, default 30), MANTLE_LINT_AI_CACHE_DIR
+
+python3 -m mantle_lint.cli examples/VulnerableStaking.sol --ai
+```
+
+**The default (no `--ai`) is unchanged: zero runtime dependencies, no network, byte-identical output.** The AI layer is stdlib-only (`urllib`/`json`/`hashlib`/`os`) and is only imported when `--ai` is passed.
+
+---
+
 ## CI integration
 
 `.github/workflows/mantle-lint.yml` runs the linter on every PR, uploads **SARIF** so findings appear inline in the GitHub "Files changed" view, and fails the check on HIGH-severity issues. That turns "did anyone remember the Mantle gotchas?" into an automatic gate on the migration PR.
@@ -99,15 +121,15 @@ Each rule has a positive case it must catch and the clean contract must stay sil
 | Developer productivity impact (10) | Drops into CLI + GitHub PR/CI with SARIF inline annotations and exit-code gating |
 | Verifiability & benchmarking (10) | Deterministic rules + a reproducible test suite; clean vs. vulnerable fixtures prove signal |
 | Execution & demo (5) | Runs end-to-end out of the box; another dev can reproduce from this README |
-| Tencent Cloud + Mantle integration depth (12) | **You add this** — see below |
+| Tencent Cloud + Mantle integration depth (12) | AI triage layer (`--ai`) annotates each deterministic finding with an exploitability ranking + a reviewable patch, with inference on a self-hosted, OpenAI-compatible endpoint on Tencent Cloud — see *AI triage layer* above. *(Engine implemented; point it at a live Tencent endpoint to complete the row.)* |
 
-This is the engine. To complete the track, layer **AI** and **Tencent Cloud** on top (next section).
+The deterministic engine + the `--ai` layer are both in place; the remaining step for the integration row is provisioning the live Tencent Cloud endpoint.
 
 ---
 
 ## Roadmap to a full submission (what to add for the win)
 
-1. **AI explanation/triage layer (host inference on Tencent Cloud → claims the 12-pt integration row).** For each finding, call an LLM to (a) write a context-aware patch diff for *this* contract, and (b) rank exploitability. Keep the deterministic rules as the ground truth so the AI augments rather than hallucinates — this is exactly the "beyond generic LLM commentary" bar the rubric sets.
+1. ✅ **AI explanation/triage layer (`--ai`).** Implemented: for each deterministic finding it generates a context-aware patch diff and ranks exploitability, with the rules kept as ground truth so the AI augments rather than hallucinates. *Remaining:* provision the self-hosted, OpenAI-compatible inference endpoint on Tencent Cloud (HAI/CVM) to claim the 12-pt integration row end-to-end.
 2. **Real benchmarking.** For gas-related rules, deploy before/after versions to Mantle Sepolia and attach measured gas deltas to each finding — turning recommendations into proven numbers.
 3. **AST upgrade (production hardening).** Swap the lexical matcher for a real Solidity AST (`@solidity-parser/parser` or the solc AST). The rule structure is already isolated for this.
 4. **Auto-fix, conservatively.** Some rules (e.g. `transfer` → `call{value:}`) can be auto-rewritten, but blind Solidity rewriting is unsafe (reentrancy ordering), so any auto-fix should emit a reviewable diff, never silently mutate code.

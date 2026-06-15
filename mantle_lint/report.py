@@ -54,6 +54,17 @@ def render_terminal(findings: List[Finding], color: bool = True) -> str:
             lines.append(_c("DIM", f"         {f.snippet}", color))
             lines.append(f"         → {f.message}")
             lines.append(f"         {_c('BOLD','fix:', color)} {f.recommendation}")
+            if f.ai_exploitability:
+                lines.append(
+                    f"         {_c('BOLD', 'AI exploitability:', color)} "
+                    f"{f.ai_exploitability} — {f.ai_reason}"
+                )
+                if f.ai_patch:
+                    lines.append(
+                        f"         {_c('BOLD', 'AI patch (suggestion — review before applying):', color)}"
+                    )
+                    for pl in f.ai_patch.split("\n"):
+                        lines.append(_c("DIM", f"           {pl}", color))
         lines.append("")
 
     counts = {}
@@ -67,18 +78,21 @@ def render_terminal(findings: List[Finding], color: bool = True) -> str:
 
 
 def render_json(findings: List[Finding]) -> str:
-    return json.dumps(
-        [
-            {
-                "ruleId": f.rule_id, "title": f.title, "severity": f.severity,
-                "category": f.category, "file": f.file, "line": f.line, "col": f.col,
-                "snippet": f.snippet, "message": f.message,
-                "recommendation": f.recommendation, "references": f.references,
-            }
-            for f in findings
-        ],
-        indent=2,
-    )
+    items = []
+    for f in findings:
+        d = {
+            "ruleId": f.rule_id, "title": f.title, "severity": f.severity,
+            "category": f.category, "file": f.file, "line": f.line, "col": f.col,
+            "snippet": f.snippet, "message": f.message,
+            "recommendation": f.recommendation, "references": f.references,
+        }
+        # AI fields are emitted only when present, so AI-off output is unchanged.
+        if f.ai_exploitability:
+            d["aiExploitability"] = f.ai_exploitability
+            d["aiReason"] = f.ai_reason
+            d["aiPatch"] = f.ai_patch
+        items.append(d)
+    return json.dumps(items, indent=2)
 
 
 _SARIF_LEVEL = {"HIGH": "error", "MEDIUM": "warning", "LOW": "note", "INFO": "note"}
@@ -99,11 +113,13 @@ def render_sarif(findings: List[Finding]) -> str:
         }
         for rid, ex in rule_ids.items()
     ]
-    results = [
-        {
+    results = []
+    for f in findings:
+        text = f"{f.message} Fix: {f.recommendation}"
+        result = {
             "ruleId": f.rule_id,
             "level": _SARIF_LEVEL.get(f.severity, "note"),
-            "message": {"text": f"{f.message} Fix: {f.recommendation}"},
+            "message": {"text": text},
             "locations": [
                 {
                     "physicalLocation": {
@@ -113,8 +129,18 @@ def render_sarif(findings: List[Finding]) -> str:
                 }
             ],
         }
-        for f in findings
-    ]
+        # AI annotations are added only when present (AI-off SARIF is unchanged).
+        if f.ai_exploitability:
+            result["properties"] = {
+                "aiExploitability": f.ai_exploitability,
+                "aiReason": f.ai_reason,
+            }
+            if f.ai_patch:
+                result["message"]["text"] = (
+                    f"{text}\n\nAI suggested patch (review before applying):\n"
+                    f"{f.ai_patch}"
+                )
+        results.append(result)
     sarif = {
         "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
         "version": "2.1.0",

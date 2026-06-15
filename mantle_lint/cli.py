@@ -45,6 +45,11 @@ def run(argv=None) -> int:
     p.add_argument("--fail-on", choices=["HIGH", "MEDIUM", "LOW", "INFO", "never"],
                    default="HIGH",
                    help="Minimum severity that causes a non-zero exit (default: HIGH).")
+    p.add_argument("--ai", action="store_true",
+                   help="Annotate findings with AI exploitability ranking + a "
+                        "reviewable patch suggestion via a self-hosted, "
+                        "OpenAI-compatible endpoint (see MANTLE_LINT_AI_* env "
+                        "vars). Off by default: no network, no extra deps.")
     args = p.parse_args(argv)
 
     rules = build_rules()
@@ -54,6 +59,7 @@ def run(argv=None) -> int:
         return 2
 
     all_findings: List[Finding] = []
+    sources = {}
     for fpath in files:
         try:
             with open(fpath, "r", encoding="utf-8") as fh:
@@ -61,7 +67,19 @@ def run(argv=None) -> int:
         except (OSError, UnicodeDecodeError) as e:
             sys.stderr.write(f"skip {fpath}: {e}\n")
             continue
+        sources[fpath] = src
         all_findings.extend(scan(fpath, src, rules))
+
+    if args.ai:
+        # Lazy import keeps the AI-off path free of any AI code path.
+        from . import ai
+        try:
+            config = ai.load_config()
+        except ai.AiConfigError as e:
+            sys.stderr.write(f"mantle-lint --ai: {e}\n")
+            return 2
+        if all_findings:
+            ai.triage(all_findings, sources, config)
 
     if args.format == "json":
         print(render_json(all_findings))
