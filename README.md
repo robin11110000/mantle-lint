@@ -167,5 +167,6 @@ The deterministic engine + the `--ai` layer are in place and there's a runbook +
 ## Honest limitations
 
 - This MVP uses a lexical scanner, not a full AST, so it favors precision on the documented patterns over exhaustive dataflow coverage.
+- The `--ai` triage layer is fully implemented and validated against a local OpenAI-compatible mock, with a runbook + smoke test for a self-hosted Tencent Cloud endpoint — but it has **not yet been run against a live Tencent-hosted endpoint**. It is ready to deploy; treat it as "integration-ready", not "integration-proven-live".
 - Mantle is actively evolving (e.g. the Jan-2026 move toward Ethereum-blob DA / ZK rollup). Treat the fee-mechanic rules (MNT008) as "flag for human review" and confirm exact current behavior against the official Mantle docs before relying on any single fix.
 - It flags risk; it does not guarantee a contract is Mantle-safe. Use it alongside normal testing and audits.
