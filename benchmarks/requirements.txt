@@ -1,0 +1,5 @@
+# Dev-only tooling for the on-chain gas benchmark harness.
+# NOTE: this does NOT affect the linter itself — `mantle_lint` stays zero-dependency.
+# Install into an isolated venv: see benchmarks/README.md.
+web3>=6,<8
+py-solc-x>=2.0.0
