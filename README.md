@@ -10,7 +10,7 @@ It is **Mantle-specific by design** — not a generic Solidity linter. Every rul
 
 - **Catch** — the Mantle-specific linter (11 rules), with a positive case + clean fixture proving each one. *(core engine)*
 - **Fix** — an optional `--ai` triage layer that ranks exploitability and drafts a reviewable patch per finding, via a self-hosted, OpenAI-compatible endpoint. The rules stay ground truth; the AI only annotates. *(core engine)*
-- **Prove** — a gas-regression CI bot that measures real Mantle Sepolia gas on PRs and comments the deltas, reusing the benchmark harness. *(makes the value legible in CI)*
+- **Prove** — a gas-regression CI bot that measures real Mantle Sepolia gas for the **MNT001 reference scenarios** on PRs and comments the deltas, reusing the benchmark harness. *(makes the value legible in CI)*
 
 ---
 
@@ -135,6 +135,8 @@ Measured on Mantle Sepolia (chainId 5003). Δ is vs the committed baseline.
 
 **Safety model:** the testnet key is a GitHub secret (a throwaway key); the workflow uses `pull_request` (**not** `pull_request_target`), so fork PRs get no secret and **skip the on-chain run gracefully** — untrusted code never runs with the key. The bot comments; it doesn't fail the build (correctness is the linter's job).
 
+**Scope (honest):** today the bot benchmarks the committed **MNT001 reference scenarios** (the `Vault*` + receiver fixtures in `benchmarks/contracts/`) and diffs them against the baseline — it does **not** yet auto-detect and benchmark arbitrary contracts a PR changes. It's a gas-regression guard on those reference scenarios and the foundation for generic changed-contract benchmarking, not a drop-in "measure whatever changed" bot.
+
 ---
 
 ## Reproducible verification
@@ -176,7 +178,7 @@ Off by default and stdlib-only, so the core tool's zero-dependency guarantee is 
 | Part B row (pts) | How this tool scores it |
 |---|---|
 | Optimization / audit output quality (13) | Code-level, Mantle-specific findings with concrete fixes — not generic LLM commentary |
-| Developer productivity impact (10) | Drops into CLI + GitHub PR/CI with SARIF inline annotations, exit-code gating, **and a gas-regression bot that comments measured Mantle gas on PRs** |
+| Developer productivity impact (10) | Drops into CLI + GitHub PR/CI with SARIF inline annotations, exit-code gating, **and a gas-regression bot that comments measured Mantle gas (MNT001 reference scenarios) on PRs** |
 | Verifiability & benchmarking (10) | Deterministic rules + a reproducible test suite; clean vs. vulnerable fixtures prove signal; **real on-chain Mantle Sepolia measurements** for MNT001 (`--benchmarks`), enforced on PRs by the gas-regression bot |
 | Execution & demo (5) | Runs end-to-end out of the box; **one-command offline demo** (`python scripts/demo.py`, see [DEMO.md](DEMO.md)); reproducible from this README |
 | Tencent Cloud + Mantle integration depth (12) | AI triage layer (`--ai`) annotates each deterministic finding with an exploitability ranking + a reviewable patch, with inference on a **self-hosted, OpenAI-compatible endpoint on Tencent Cloud**. Engine + flag implemented; runbook to go live in [`docs/tencent-endpoint.md`](docs/tencent-endpoint.md), with a `scripts/ai_smoke.py` health check. |

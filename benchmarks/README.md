@@ -4,6 +4,11 @@ Turns the gas-related rule recommendations into **measured numbers from real
 Mantle Sepolia (chainId 5003)** transactions. Currently covers **MNT001**
 (`.transfer()` / `.send()` 2300-gas stipend → `call{value:}`).
 
+> **Scope:** the CI gas bot (`.github/workflows/gas-regression.yml`) benchmarks
+> *these* committed reference contracts and diffs them against `gas-snapshot.json`.
+> It is **not** a generic "detect and benchmark whatever contract a PR changed"
+> bot — it's a regression guard on the reference scenarios, extendable per rule.
+
 > **This is a dev-only harness.** It needs `web3.py` + `py-solc-x` and is fully
 > isolated here. The linter itself (`mantle_lint`) stays **zero-dependency** — it
 > never imports anything in this folder.
