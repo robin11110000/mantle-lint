@@ -1,7 +1,11 @@
 name: Mantle Migration Lint
 
-# Runs the linter on every push / PR and surfaces findings inline in the PR via
-# GitHub code scanning (SARIF). HIGH-severity findings fail the check.
+# Demonstrates the linter as a CI gate on this repo's own example contracts:
+#   * produces SARIF for examples/ so findings show in the Security / "Files
+#     changed" view (informational: --fail-on never keeps this job green), and
+#   * gates on the Mantle-safe contract, which reports 0 findings -> exit 0.
+# (Drop this into a real contract repo and point it at your contracts to gate
+#  migration PRs on HIGH-severity Mantle issues.)
 
 on:
   push:
@@ -22,14 +26,13 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Run mantle-migrate-lint (SARIF)
-        run: |
-          python3 -m mantle_lint.cli ./contracts --format sarif > mantle-lint.sarif || true
+      - name: Lint example contracts -> SARIF (informational)
+        run: python -m mantle_lint.cli examples --format sarif --fail-on never > mantle-lint.sarif
 
       - name: Upload SARIF to code scanning
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: mantle-lint.sarif
 
-      - name: Gate the build on HIGH findings
-        run: python3 -m mantle_lint.cli ./contracts --fail-on HIGH
+      - name: Gate — the Mantle-safe contract must pass (0 findings)
+        run: python -m mantle_lint.cli examples/CleanStaking.sol --fail-on HIGH
