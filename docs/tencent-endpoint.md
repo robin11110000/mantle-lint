@@ -19,10 +19,13 @@ is exactly what `--ai` already speaks.
 In the Tencent Cloud console, create a **CVM** (or a HAI instance) with:
 
 - **OS:** Ubuntu 22.04 LTS
-- **CPU/RAM:** ≥ 4 vCPU / **8 GB RAM** for a 3B model; 4 GB is enough for a 1.5B
-  model. (CPU inference is slow but fine for a demo — the response cache makes
-  repeats instant.)
-- **Disk:** 20 GB+ (model weights are a few GB).
+- **CPU/RAM:** ≥ 2 vCPU / **4 GB RAM** for the 1.5B model (the low-footprint
+  default below); 8 GB if you later move up to 3B. CPU inference is slow but fine
+  for a demo — the response cache makes repeats instant.
+- **Disk:** small. The 1.5B model is **~1 GB**; with Ubuntu + Ollama the whole
+  instance fits comfortably in a **default ~10–20 GB** system disk — no extra
+  volume needed. (The model is stored here, on the instance — **not** on your
+  laptop.)
 - **Network:** a public IP so you can SSH in.
 
 Note the instance's public IP and your SSH user (often `ubuntu`).
@@ -38,7 +41,9 @@ SSH into the instance, then:
 
 ```bash
 curl -fsSL https://ollama.com/install.sh | sh   # installs + starts a systemd service
-ollama pull qwen2.5-coder:3b                     # or qwen2.5-coder:1.5b if RAM < 8 GB
+ollama pull qwen2.5-coder:1.5b                   # ~1 GB, the low-footprint default
+# tighter still: `qwen2.5-coder:0.5b` (~0.5 GB) works but more often returns
+# off-schema output (which is skipped gracefully). Use 3b only if you have the disk.
 ```
 
 Ollama listens on `127.0.0.1:11434` by default and exposes OpenAI-compatible routes
@@ -77,7 +82,7 @@ On the machine that runs the linter (with the tunnel open):
 ```bash
 # bash
 export MANTLE_LINT_AI_BASE_URL=http://localhost:11434/v1
-export MANTLE_LINT_AI_MODEL=qwen2.5-coder:3b
+export MANTLE_LINT_AI_MODEL=qwen2.5-coder:1.5b
 # export MANTLE_LINT_AI_API_KEY=...   # only if you put an auth proxy in front
 
 python scripts/ai_smoke.py            # 3-step health check (config, reachable, triage)
@@ -87,7 +92,7 @@ PowerShell equivalent:
 
 ```powershell
 $env:MANTLE_LINT_AI_BASE_URL="http://localhost:11434/v1"
-$env:MANTLE_LINT_AI_MODEL="qwen2.5-coder:3b"
+$env:MANTLE_LINT_AI_MODEL="qwen2.5-coder:1.5b"
 python scripts\ai_smoke.py
 ```
 
