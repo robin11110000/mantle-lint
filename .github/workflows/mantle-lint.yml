@@ -1,0 +1,35 @@
+name: Mantle Migration Lint
+
+# Runs the linter on every push / PR and surfaces findings inline in the PR via
+# GitHub code scanning (SARIF). HIGH-severity findings fail the check.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+  security-events: write   # required to upload SARIF
+
+jobs:
+  mantle-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Run mantle-migrate-lint (SARIF)
+        run: |
+          python3 -m mantle_lint.cli ./contracts --format sarif > mantle-lint.sarif || true
+
+      - name: Upload SARIF to code scanning
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: mantle-lint.sarif
+
+      - name: Gate the build on HIGH findings
+        run: python3 -m mantle_lint.cli ./contracts --fail-on HIGH

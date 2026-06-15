@@ -1,0 +1,13 @@
+[project]
+name = "mantle-migrate-lint"
+version = "0.1.0"
+description = "Catch Ethereum-L1 assumptions before migrating a Solidity contract to Mantle."
+requires-python = ">=3.8"
+dependencies = []   # zero runtime dependencies by design
+
+[project.scripts]
+mantle-migrate-lint = "mantle_lint.cli:main"
+
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
