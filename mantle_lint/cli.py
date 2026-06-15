@@ -50,6 +50,10 @@ def run(argv=None) -> int:
                         "reviewable patch suggestion via a self-hosted, "
                         "OpenAI-compatible endpoint (see MANTLE_LINT_AI_* env "
                         "vars). Off by default: no network, no extra deps.")
+    p.add_argument("--benchmarks", metavar="PATH",
+                   help="Attach measured on-chain numbers from a benchmark "
+                        "results.json (e.g. benchmarks/results.json) to matching "
+                        "findings. Off by default; stdlib-only.")
     args = p.parse_args(argv)
 
     rules = build_rules()
@@ -80,6 +84,16 @@ def run(argv=None) -> int:
             return 2
         if all_findings:
             ai.triage(all_findings, sources, config)
+
+    if args.benchmarks:
+        from . import benchmarks as bench
+        try:
+            annotations = bench.load_annotations(args.benchmarks)
+        except (OSError, ValueError) as e:
+            sys.stderr.write(
+                f"mantle-lint --benchmarks: cannot read {args.benchmarks}: {e}\n")
+            return 2
+        bench.attach(all_findings, annotations)
 
     if args.format == "json":
         print(render_json(all_findings))

@@ -296,6 +296,38 @@ def test_cli_ai_flag_fails_clearly_without_base_url():
     assert "MANTLE_LINT_AI_BASE_URL" in err
 
 
+# --- benchmark integration (benchmarks.py + --benchmarks) --------------------
+
+BENCH_RESULTS = os.path.join(os.path.dirname(HERE), "benchmarks", "results.json")
+
+
+def test_benchmarks_loader_reads_results_json():
+    from mantle_lint import benchmarks
+    ann = benchmarks.load_annotations(BENCH_RESULTS)
+    assert "MNT001" in ann
+    note = ann["MNT001"]["note"]
+    assert "REVERTED" in note and "Mantle Sepolia" in note
+    assert ann["MNT001"]["links"]  # real explorer links present
+
+
+def test_benchmarks_attach_only_matching_rule():
+    from mantle_lint import benchmarks
+    with open(os.path.join(EX, "VulnerableStaking.sol")) as fh:
+        findings = scan("v.sol", fh.read(), RULES)
+    benchmarks.attach(findings, benchmarks.load_annotations(BENCH_RESULTS))
+    mnt001 = [f for f in findings if f.rule_id == "MNT001"]
+    assert mnt001 and all(f.benchmark for f in mnt001)
+    assert all(f.benchmark is None for f in findings if f.rule_id != "MNT001")
+
+
+def test_benchmark_off_shape_unchanged():
+    from mantle_lint.report import render_terminal, render_json
+    with open(os.path.join(EX, "VulnerableStaking.sol")) as fh:
+        findings = scan("v.sol", fh.read(), RULES)
+    assert "measured:" not in render_terminal(findings, color=False)
+    assert '"benchmark"' not in render_json(findings)
+
+
 if __name__ == "__main__":
     fns = [v for k, v in sorted(globals().items()) if k.startswith("test_")]
     passed = 0

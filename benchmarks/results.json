@@ -1,0 +1,77 @@
+{
+  "rule": "MNT001",
+  "measuredAtUTC": "2026-06-15T07:24:16Z",
+  "network": {
+    "rpc": "https://rpc.sepolia.mantle.xyz",
+    "chainId": 5003,
+    "explorer": "https://sepolia.mantlescan.xyz"
+  },
+  "compiler": "0.8.23",
+  "optimizer": {
+    "enabled": true,
+    "runs": 200
+  },
+  "account": "0x46298E5974ec2F6665675cDF6De2e755b3BA02CB",
+  "contracts": {
+    "MinimalReceiver": "0xeCEFF42D397469E2D052277E241383737a3eDaB1",
+    "GreedyReceiver": "0x8573cb0699ED9Af67f31c63aE421FDEF5554F5ef",
+    "VaultBefore:before_to_minimal": "0x5f5669b3CC1B83b3aA75f598Cb345889231BB224",
+    "VaultBefore:before_to_greedy": "0x078036E74c8BC7E1584852237FFbd9086d198c3a",
+    "VaultAfter:after_to_minimal": "0x82caA85A736aC4F5f9c6649d219C0392776C1110",
+    "VaultAfter:after_to_greedy": "0xEe473fdBcF517047E54b3FD29914268512128F5e"
+  },
+  "scenarios": [
+    {
+      "name": "before_to_minimal",
+      "vault": "VaultBefore",
+      "recipient": "0xeCEFF42D397469E2D052277E241383737a3eDaB1",
+      "expectRevert": false,
+      "txHash": "59e507344b0714376b9df6ddc44c51516a7847a868fb4bfd714255328b70d181",
+      "status": 1,
+      "gasUsed": 31118,
+      "block": 39981774,
+      "explorer": "https://sepolia.mantlescan.xyz/tx/59e507344b0714376b9df6ddc44c51516a7847a868fb4bfd714255328b70d181"
+    },
+    {
+      "name": "before_to_greedy",
+      "vault": "VaultBefore",
+      "recipient": "0x8573cb0699ED9Af67f31c63aE421FDEF5554F5ef",
+      "expectRevert": true,
+      "txHash": "d922ecff290c1a5dd72c0f6d8dfee4a0eafeba7e0121f5f1068beeeaef17008c",
+      "status": 0,
+      "gasUsed": 33385,
+      "block": 39981780,
+      "explorer": "https://sepolia.mantlescan.xyz/tx/d922ecff290c1a5dd72c0f6d8dfee4a0eafeba7e0121f5f1068beeeaef17008c"
+    },
+    {
+      "name": "after_to_minimal",
+      "vault": "VaultAfter",
+      "recipient": "0xeCEFF42D397469E2D052277E241383737a3eDaB1",
+      "expectRevert": false,
+      "txHash": "f03ef82a8fef938cb072ae52fc0282921e2409f3ac72020c3900401c4c42d0c1",
+      "status": 1,
+      "gasUsed": 31145,
+      "block": 39981786,
+      "explorer": "https://sepolia.mantlescan.xyz/tx/f03ef82a8fef938cb072ae52fc0282921e2409f3ac72020c3900401c4c42d0c1"
+    },
+    {
+      "name": "after_to_greedy",
+      "vault": "VaultAfter",
+      "recipient": "0x8573cb0699ED9Af67f31c63aE421FDEF5554F5ef",
+      "expectRevert": false,
+      "txHash": "00c3b800c580c00306b1c1e5594d8cf03fb2625124af85eed370a85e8d69874c",
+      "status": 1,
+      "gasUsed": 53369,
+      "block": 39981792,
+      "explorer": "https://sepolia.mantlescan.xyz/tx/00c3b800c580c00306b1c1e5594d8cf03fb2625124af85eed370a85e8d69874c"
+    }
+  ],
+  "summary": {
+    "before_to_greedy_reverted": true,
+    "after_to_greedy_succeeded": true,
+    "gas_minimal_before": 31118,
+    "gas_minimal_after": 31145,
+    "gas_delta_after_minus_before": 27,
+    "note": "gasUsed is L2 execution gas; Mantle total fee also includes an L1-data-fee and operator-fee component not captured here."
+  }
+}

@@ -41,6 +41,9 @@ class Finding:
     ai_exploitability: Optional[str] = None   # "low" | "medium" | "high"
     ai_reason: Optional[str] = None           # one-line justification
     ai_patch: Optional[str] = None            # reviewable unified diff (suggestion)
+    # Optional measured on-chain benchmark annotation (populated only when
+    # --benchmarks is passed). None -> output identical to a non-benchmarked run.
+    benchmark: Optional[dict] = None
 
 
 @dataclass

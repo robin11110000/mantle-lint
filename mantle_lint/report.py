@@ -65,6 +65,12 @@ def render_terminal(findings: List[Finding], color: bool = True) -> str:
                     )
                     for pl in f.ai_patch.split("\n"):
                         lines.append(_c("DIM", f"           {pl}", color))
+            if f.benchmark:
+                lines.append(
+                    f"         {_c('BOLD', 'measured:', color)} {f.benchmark.get('note', '')}"
+                )
+                for link in f.benchmark.get("links", []):
+                    lines.append(_c("DIM", f"           {link}", color))
         lines.append("")
 
     counts = {}
@@ -91,6 +97,8 @@ def render_json(findings: List[Finding]) -> str:
             d["aiExploitability"] = f.ai_exploitability
             d["aiReason"] = f.ai_reason
             d["aiPatch"] = f.ai_patch
+        if f.benchmark:
+            d["benchmark"] = f.benchmark
         items.append(d)
     return json.dumps(items, indent=2)
 
@@ -140,6 +148,10 @@ def render_sarif(findings: List[Finding]) -> str:
                     f"{text}\n\nAI suggested patch (review before applying):\n"
                     f"{f.ai_patch}"
                 )
+        if f.benchmark:
+            props = result.setdefault("properties", {})
+            props["benchmark"] = f.benchmark.get("summary", {})
+            result["message"]["text"] += f"\n\n{f.benchmark.get('note', '')}"
         results.append(result)
     sarif = {
         "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
