@@ -62,6 +62,28 @@ python -m mantle_lint.cli examples/VulnerableStaking.sol --fail-on MEDIUM
 ```
 → non-zero exit gates the PR. `.github/workflows/mantle-lint.yml` also uploads SARIF for inline PR annotations.
 
+### 6. PROVE in CI — the gas-regression bot
+
+The whole loop lives on the PR. `.github/workflows/gas-regression.yml` re-runs the on-chain harness on PRs that touch the benchmark contracts, diffs measured Mantle Sepolia gas against the committed baseline, and posts a sticky comment. You can render that exact comment locally:
+
+```bash
+python benchmarks/gas_regression.py        # prints the PR-comment Markdown
+```
+
+→
+```markdown
+## ⛽ Mantle gas report — MNT001
+| Scenario | status | gasUsed | baseline | Δ |
+|---|---|---|---|---|
+| `before_to_greedy` | revert | 33385 | 33385 | +0 |
+| `after_to_greedy`  | ok     | 53369 | 53369 | +0 |
+- ✅ `.transfer()` to a contract recipient reverts on-chain (the bug).
+- ✅ `call{value:}` succeeds (the fix).
+> ✅ No gas regression vs the committed baseline.
+```
+
+**Safety:** throwaway testnet key as a GitHub secret; `pull_request` (not `pull_request_target`), so fork PRs skip the on-chain run gracefully — untrusted code never runs with the key.
+
 ---
 
 ## What stays true

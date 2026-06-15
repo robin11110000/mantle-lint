@@ -1,10 +1,16 @@
 # mantle-migrate-lint
 
-**Catch the Ethereum-L1 assumptions that silently break when you migrate a Solidity contract to Mantle.**
+**On every PR, catch the Ethereum-L1 assumptions that break on Mantle, draft the fix, and prove the gas impact with measured on-chain numbers.**
 
-Most contracts "deploy fine" on Mantle because it's EVM-compatible — and then misbehave in production, because a handful of L1 assumptions are no longer true. `mantle-migrate-lint` is a static analyzer that flags those exact assumptions, explains *why* each one breaks on Mantle, gives a concrete fix, and proves its findings with a reproducible test suite. It runs in your terminal or as a CI gate, with zero runtime dependencies (just Python 3.8+).
+Most contracts "deploy fine" on Mantle because it's EVM-compatible — and then misbehave in production, because a handful of L1 assumptions are no longer true. `mantle-migrate-lint` is one CI-native Mantle DevTool that flags those exact assumptions, explains *why* each breaks on Mantle, drafts a concrete fix, and backs gas-related findings with measured on-chain numbers. It runs in your terminal or as a CI gate, with zero runtime dependencies (just Python 3.8+).
 
 It is **Mantle-specific by design** — not a generic Solidity linter. Every rule maps to a documented divergence between Mantle and Ethereum mainnet.
+
+**One tool, three pillars on a zero-dependency core:**
+
+- **Catch** — the Mantle-specific linter (11 rules), with a positive case + clean fixture proving each one. *(core engine)*
+- **Fix** — an optional `--ai` triage layer that ranks exploitability and drafts a reviewable patch per finding, via a self-hosted, OpenAI-compatible endpoint. The rules stay ground truth; the AI only annotates. *(core engine)*
+- **Prove** — a gas-regression CI bot that measures real Mantle Sepolia gas on PRs and comments the deltas, reusing the benchmark harness. *(makes the value legible in CI)*
 
 ---
 
@@ -105,7 +111,29 @@ python3 scripts/ai_smoke.py   # checks: config -> endpoint reachable -> finding 
 
 ## CI integration
 
-`.github/workflows/mantle-lint.yml` runs the linter on every PR, uploads **SARIF** so findings appear inline in the GitHub "Files changed" view, and fails the check on HIGH-severity issues. That turns "did anyone remember the Mantle gotchas?" into an automatic gate on the migration PR.
+The whole **catch → fix → prove** loop lives on the PR:
+
+**1. Catch (gate).** `.github/workflows/mantle-lint.yml` runs the linter on every PR, uploads **SARIF** so findings appear inline in the "Files changed" view, and fails the check on HIGH-severity issues — turning "did anyone remember the Mantle gotchas?" into an automatic gate.
+
+**2. Prove (gas bot).** `.github/workflows/gas-regression.yml` is the second pillar: on PRs that touch the benchmark contracts/harness, it runs the harness against **Mantle Sepolia**, diffs the measured gas against the committed baseline (`benchmarks/gas-snapshot.json`), and posts a sticky PR comment like:
+
+```markdown
+## ⛽ Mantle gas report — MNT001
+Measured on Mantle Sepolia (chainId 5003). Δ is vs the committed baseline.
+
+| Scenario | status | gasUsed | baseline | Δ |
+|---|---|---|---|---|
+| `before_to_minimal` | ok | 31118 | 31118 | +0 |
+| `before_to_greedy` | revert | 33385 | 33385 | +0 |
+| `after_to_minimal` | ok | 31145 | 31145 | +0 |
+| `after_to_greedy` | ok | 53369 | 53369 | +0 |
+
+- ✅ `.transfer()` to a contract recipient **reverts** on-chain (the L1 assumption that breaks on Mantle).
+- ✅ `call{value:}` **succeeds** (the fix).
+> ✅ No gas regression vs the committed baseline.
+```
+
+**Safety model:** the testnet key is a GitHub secret (a throwaway key); the workflow uses `pull_request` (**not** `pull_request_target`), so fork PRs get no secret and **skip the on-chain run gracefully** — untrusted code never runs with the key. The bot comments; it doesn't fail the build (correctness is the linter's job).
 
 ---
 
@@ -148,9 +176,9 @@ Off by default and stdlib-only, so the core tool's zero-dependency guarantee is 
 | Part B row (pts) | How this tool scores it |
 |---|---|
 | Optimization / audit output quality (13) | Code-level, Mantle-specific findings with concrete fixes — not generic LLM commentary |
-| Developer productivity impact (10) | Drops into CLI + GitHub PR/CI with SARIF inline annotations and exit-code gating |
-| Verifiability & benchmarking (10) | Deterministic rules + a reproducible test suite; clean vs. vulnerable fixtures prove signal; **plus real on-chain Mantle Sepolia measurements** for MNT001 (`--benchmarks`) |
-| Execution & demo (5) | Runs end-to-end out of the box; another dev can reproduce from this README |
+| Developer productivity impact (10) | Drops into CLI + GitHub PR/CI with SARIF inline annotations, exit-code gating, **and a gas-regression bot that comments measured Mantle gas on PRs** |
+| Verifiability & benchmarking (10) | Deterministic rules + a reproducible test suite; clean vs. vulnerable fixtures prove signal; **real on-chain Mantle Sepolia measurements** for MNT001 (`--benchmarks`), enforced on PRs by the gas-regression bot |
+| Execution & demo (5) | Runs end-to-end out of the box; **one-command offline demo** (`python scripts/demo.py`, see [DEMO.md](DEMO.md)); reproducible from this README |
 | Tencent Cloud + Mantle integration depth (12) | AI triage layer (`--ai`) annotates each deterministic finding with an exploitability ranking + a reviewable patch, with inference on a **self-hosted, OpenAI-compatible endpoint on Tencent Cloud**. Engine + flag implemented; runbook to go live in [`docs/tencent-endpoint.md`](docs/tencent-endpoint.md), with a `scripts/ai_smoke.py` health check. |
 
 The deterministic engine + the `--ai` layer are in place and there's a runbook + smoke test for the Tencent Cloud endpoint; running that runbook makes the integration live end-to-end.
