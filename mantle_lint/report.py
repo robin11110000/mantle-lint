@@ -4,9 +4,25 @@ code-scanning / inline PR annotations)."""
 from __future__ import annotations
 
 import json
+import sys
 from typing import List
 
 from .engine import Finding
+
+
+def _ascii_safe(text: str) -> str:
+    """Downgrade display glyphs to ASCII when the active stdout encoding can't
+    represent them (e.g. the default cp1252 Windows console), so rendering can
+    never crash with UnicodeEncodeError. UTF-8 terminals are unaffected and keep
+    the original glyphs."""
+    enc = getattr(sys.stdout, "encoding", None) or "utf-8"
+    try:
+        text.encode(enc)
+        return text
+    except (LookupError, UnicodeEncodeError):
+        downgraded = text.replace("→", "->").replace("—", "-")
+        # Final safety net for any other stray non-ASCII (e.g. in a snippet).
+        return downgraded.encode("ascii", "replace").decode("ascii")
 
 SEVERITY_ORDER = {"HIGH": 0, "MEDIUM": 1, "LOW": 2, "INFO": 3}
 _COLORS = {
@@ -47,7 +63,7 @@ def render_terminal(findings: List[Finding], color: bool = True) -> str:
         f"{sev}: {counts.get(sev, 0)}" for sev in ["HIGH", "MEDIUM", "LOW", "INFO"]
     )
     lines.append(_c("BOLD", f"  Summary  {summary}  (total {len(findings)})", color))
-    return "\n".join(lines)
+    return _ascii_safe("\n".join(lines))
 
 
 def render_json(findings: List[Finding]) -> str:

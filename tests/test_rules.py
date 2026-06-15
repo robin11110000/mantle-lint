@@ -10,6 +10,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from mantle_lint.engine import scan
+from mantle_lint.report import _ascii_safe
 from mantle_lint.rules import build_rules
 
 RULES = build_rules()
@@ -53,6 +54,33 @@ def test_comment_and_string_are_ignored():
     src = ('contract C{ // tx.origin here is a comment\n'
            'string s = "block.chainid == 1"; }')
     assert _ids(src) == set()
+
+
+class _FakeStdout:
+    def __init__(self, encoding):
+        self.encoding = encoding
+
+
+def test_terminal_output_downgrades_glyphs_on_cp1252():
+    # A default Windows console (cp1252) can't encode -> / em-dash; rendering
+    # must downgrade to ASCII instead of crashing with UnicodeEncodeError.
+    saved = sys.stdout
+    sys.stdout = _FakeStdout("cp1252")
+    try:
+        out = _ascii_safe("arrow → and dash —")
+    finally:
+        sys.stdout = saved
+    assert out == "arrow -> and dash -"
+    out.encode("cp1252")  # must not raise
+
+
+def test_terminal_output_preserves_glyphs_on_utf8():
+    saved = sys.stdout
+    sys.stdout = _FakeStdout("utf-8")
+    try:
+        assert _ascii_safe("arrow → and dash —") == "arrow → and dash —"
+    finally:
+        sys.stdout = saved
 
 
 if __name__ == "__main__":

@@ -25,6 +25,8 @@ These are precisely the bugs that don't show up in a quick testnet click-through
 
 No dependencies to install. Clone and run:
 
+> **Windows note:** commands below use `python3` (Linux/macOS). On Windows, use `python`.
+
 ```bash
 # scan a single file
 python3 -m mantle_lint.cli examples/VulnerableStaking.sol
