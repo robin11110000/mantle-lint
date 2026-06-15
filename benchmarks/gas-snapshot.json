@@ -1,0 +1,26 @@
+{
+  "rule": "MNT001",
+  "network": {
+    "rpc": "https://rpc.sepolia.mantle.xyz",
+    "chainId": 5003,
+    "explorer": "https://sepolia.mantlescan.xyz"
+  },
+  "scenarios": {
+    "before_to_minimal": {
+      "gasUsed": 31118,
+      "status": 1
+    },
+    "before_to_greedy": {
+      "gasUsed": 33385,
+      "status": 0
+    },
+    "after_to_minimal": {
+      "gasUsed": 31145,
+      "status": 1
+    },
+    "after_to_greedy": {
+      "gasUsed": 53369,
+      "status": 1
+    }
+  }
+}

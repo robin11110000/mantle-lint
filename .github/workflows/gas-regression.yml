@@ -1,0 +1,78 @@
+name: Mantle gas regression
+
+# Comments measured Mantle Sepolia gas deltas on PRs that touch the benchmark
+# contracts/harness.
+#
+# Safety:
+#   * Uses `pull_request` (NOT pull_request_target), so secrets are exposed only
+#     to same-repo PRs. Fork PRs get no secret and SKIP the on-chain run — they
+#     never run untrusted code with the key.
+#   * The testnet key is a GitHub secret (MANTLE_TESTNET_KEY) — a throwaway key.
+#   * The baseline lives in the repo (benchmarks/gas-snapshot.json); the job only
+#     compares against it and comments. Update it deliberately on main.
+
+on:
+  pull_request:
+    paths:
+      - "benchmarks/contracts/**"
+      - "benchmarks/bench_mnt001.py"
+      - "benchmarks/gas_regression.py"
+      - "benchmarks/gas-snapshot.json"
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  gas:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Detect testnet key (graceful skip on forks / no secret)
+        id: key
+        env:
+          MANTLE_TESTNET_KEY: ${{ secrets.MANTLE_TESTNET_KEY }}
+        run: |
+          if [ -z "$MANTLE_TESTNET_KEY" ]; then
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "::notice title=Gas bot skipped::No MANTLE_TESTNET_KEY secret (e.g. a fork PR); skipping the on-chain gas run."
+          else
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install benchmark deps
+        if: steps.key.outputs.present == 'true'
+        run: pip install -r benchmarks/requirements.txt
+
+      - name: Run on-chain benchmark (Mantle Sepolia)
+        if: steps.key.outputs.present == 'true'
+        env:
+          PRIVATE_KEY: ${{ secrets.MANTLE_TESTNET_KEY }}
+        run: python benchmarks/bench_mnt001.py
+
+      - name: Build gas-regression comment
+        if: steps.key.outputs.present == 'true'
+        run: python benchmarks/gas_regression.py --out gas-comment.md
+
+      - name: Post / update PR comment
+        if: steps.key.outputs.present == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const body = fs.readFileSync('gas-comment.md', 'utf8');
+            const marker = '<!-- mantle-gas-bot -->';
+            const { owner, repo } = context.repo;
+            const issue_number = context.issue.number;
+            const { data: comments } = await github.rest.issues.listComments({ owner, repo, issue_number });
+            const existing = comments.find(c => c.body && c.body.includes(marker));
+            if (existing) {
+              await github.rest.issues.updateComment({ owner, repo, comment_id: existing.id, body });
+            } else {
+              await github.rest.issues.createComment({ owner, repo, issue_number, body });
+            }

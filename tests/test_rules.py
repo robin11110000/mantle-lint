@@ -328,6 +328,41 @@ def test_benchmark_off_shape_unchanged():
     assert '"benchmark"' not in render_json(findings)
 
 
+# --- gas-regression report (benchmarks/gas_regression.py) --------------------
+
+def _gas_mod():
+    bench_dir = os.path.join(os.path.dirname(HERE), "benchmarks")
+    if bench_dir not in sys.path:
+        sys.path.insert(0, bench_dir)
+    import gas_regression
+    return gas_regression
+
+
+def test_gas_regression_no_regression_when_equal():
+    g = _gas_mod()
+    results = g._load(BENCH_RESULTS)
+    baseline = g.snapshot_from_results(results)  # baseline == current => zero deltas
+    comment = g.build_comment(results, baseline)
+    assert g.MARKER in comment
+    assert "Mantle gas report" in comment and "MNT001" in comment
+    assert "No gas regression" in comment
+    assert "+0" in comment
+    # behavioural call-outs from the real on-chain run
+    assert "reverts" in comment and "succeeds" in comment
+
+
+def test_gas_regression_flags_increase():
+    g = _gas_mod()
+    results = g._load(BENCH_RESULTS)
+    baseline = g.snapshot_from_results(results)
+    # pretend the baseline was lower for one scenario -> current is a regression
+    name = next(iter(baseline["scenarios"]))
+    baseline["scenarios"][name]["gasUsed"] -= 1000
+    comment = g.build_comment(results, baseline)
+    assert "gas increased vs baseline" in comment
+    assert f"`{name}` (+1000)" in comment
+
+
 if __name__ == "__main__":
     fns = [v for k, v in sorted(globals().items()) if k.startswith("test_")]
     passed = 0
