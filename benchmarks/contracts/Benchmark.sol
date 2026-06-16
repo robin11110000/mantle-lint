@@ -38,9 +38,11 @@ contract VaultBefore {
 
 /// Mantle-safe payout: uses `call{value:}` and checks success.
 contract VaultAfter {
+    uint256 public payouts; // demo: extra SSTORE to surface a gas delta
     function fund() external payable {}
 
     function payout(address to) external {
+        payouts += 1;
         (bool ok, ) = payable(to).call{value: address(this).balance}("");
         require(ok, "native transfer failed");
     }
