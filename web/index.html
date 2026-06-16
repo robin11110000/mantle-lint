@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>mantle-migrate-lint — catch L1 assumptions that break on Mantle</title>
-<meta name="description" content="Paste a Solidity contract and see the Ethereum-L1 assumptions that silently break after migrating to Mantle — running entirely in your browser." />
+<meta name="description" content="Paste a Solidity contract and see the Ethereum-L1 assumptions that silently break after migrating to Mantle — compiled with solc and analyzed entirely in your browser." />
 <style>
   :root {
     --bg: #0b0f14; --panel: #121821; --panel2: #0e141c; --border: #1f2a37;
@@ -15,56 +15,48 @@
   }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--sans); line-height: 1.5; }
-  a { color: var(--accent); text-decoration: none; }
-  a:hover { text-decoration: underline; }
+  a { color: var(--accent); text-decoration: none; } a:hover { text-decoration: underline; }
   header { border-bottom: 1px solid var(--border); padding: 20px 24px; }
   .wrap { max-width: 1200px; margin: 0 auto; }
-  h1 { margin: 0; font-size: 20px; letter-spacing: .2px; }
-  h1 .dim { color: var(--muted); font-weight: 500; }
-  .tagline { margin: 6px 0 14px; color: var(--text); font-size: 15px; max-width: 760px; }
+  h1 { margin: 0; font-size: 20px; } h1 .dim { color: var(--muted); font-weight: 500; }
+  .tagline { margin: 6px 0 14px; font-size: 15px; max-width: 780px; }
   .pillars { display: flex; gap: 8px; flex-wrap: wrap; }
   .pill { font-size: 12px; padding: 4px 10px; border: 1px solid var(--border); border-radius: 999px; color: var(--muted); }
-  .pill b { color: var(--text); }
-  .pill.active { border-color: var(--accent); color: var(--accent); }
+  .pill b { color: var(--text); } .pill.active { border-color: var(--accent); color: var(--accent); }
   main { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; padding: 20px 24px; }
   @media (max-width: 880px) { main { grid-template-columns: 1fr; } }
   .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
   .panel .head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--border); font-size: 13px; color: var(--muted); }
   .toolbar { display: flex; gap: 8px; flex-wrap: wrap; }
   button { font: inherit; font-size: 13px; cursor: pointer; border-radius: 7px; border: 1px solid var(--border); background: var(--panel2); color: var(--text); padding: 6px 12px; }
-  button:hover { border-color: var(--accent); }
+  button:hover { border-color: var(--accent); } button:disabled { opacity: .5; cursor: default; }
   button.primary { background: var(--accent); color: #04150e; border-color: var(--accent); font-weight: 600; }
   textarea { width: 100%; height: 460px; resize: vertical; border: 0; background: var(--panel2); color: var(--text); font-family: var(--mono); font-size: 13px; line-height: 1.55; padding: 14px; outline: none; }
   .summary { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; padding: 12px 14px; border-bottom: 1px solid var(--border); }
-  .count { font-size: 13px; color: var(--muted); }
-  .count b { color: var(--text); }
+  .count { font-size: 13px; color: var(--muted); } .count b { color: var(--text); }
   .gate { margin-left: auto; font-family: var(--mono); font-size: 12px; padding: 4px 10px; border-radius: 6px; border: 1px solid var(--border); }
-  .gate.fail { color: var(--high); border-color: var(--high); }
-  .gate.pass { color: var(--accent); border-color: var(--accent); }
-  .findings { padding: 8px; max-height: 520px; overflow: auto; }
+  .gate.fail { color: var(--high); border-color: var(--high); } .gate.pass { color: var(--accent); border-color: var(--accent); }
+  .status { padding: 8px 14px; font-size: 12px; color: var(--muted); border-bottom: 1px solid var(--border); font-family: var(--mono); }
+  .status b { color: var(--text); }
+  .chips { display: flex; gap: 8px; flex-wrap: wrap; padding: 10px 14px 0; }
+  .chip { font-family: var(--mono); font-size: 12px; color: var(--text); background: var(--panel2); border: 1px solid var(--border); border-radius: 6px; padding: 4px 9px; }
+  .diags { padding: 6px 14px 0; }
+  .diag { font-family: var(--mono); font-size: 12px; padding: 5px 9px; border-radius: 6px; margin: 6px 0; border: 1px solid var(--border); }
+  .diag.error { color: var(--high); border-color: var(--high); } .diag.warning { color: var(--medium); border-color: var(--medium); }
+  .findings { padding: 8px; max-height: 460px; overflow: auto; }
   .finding { border: 1px solid var(--border); border-left-width: 3px; border-radius: 8px; padding: 11px 13px; margin: 8px; background: var(--panel2); }
-  .finding.HIGH { border-left-color: var(--high); }
-  .finding.MEDIUM { border-left-color: var(--medium); }
-  .finding.INFO { border-left-color: var(--info); }
+  .finding.HIGH { border-left-color: var(--high); } .finding.MEDIUM { border-left-color: var(--medium); } .finding.INFO { border-left-color: var(--info); }
   .frow { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
-  .sev { font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 5px; letter-spacing: .4px; }
-  .sev.HIGH { background: rgba(240,80,110,.15); color: var(--high); }
-  .sev.MEDIUM { background: rgba(255,180,84,.15); color: var(--medium); }
-  .sev.INFO { background: rgba(125,138,160,.18); color: var(--info); }
-  .rid { font-family: var(--mono); font-weight: 700; }
-  .loc { font-family: var(--mono); color: var(--muted); font-size: 12px; }
+  .sev { font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 5px; }
+  .sev.HIGH { background: rgba(240,80,110,.15); color: var(--high); } .sev.MEDIUM { background: rgba(255,180,84,.15); color: var(--medium); } .sev.INFO { background: rgba(125,138,160,.18); color: var(--info); }
+  .rid { font-family: var(--mono); font-weight: 700; } .loc { font-family: var(--mono); color: var(--muted); font-size: 12px; }
   .ftitle { font-weight: 600; }
   .snip { font-family: var(--mono); font-size: 12px; color: var(--muted); background: #0a0f15; border: 1px solid var(--border); border-radius: 6px; padding: 6px 9px; margin: 8px 0 6px; overflow-x: auto; white-space: pre; }
-  .why { font-size: 13px; color: #cbd5e1; margin: 2px 0; }
-  .fix { font-size: 13px; margin-top: 6px; }
-  .fix b { color: var(--accent); }
+  .why { font-size: 13px; color: #cbd5e1; } .fix { font-size: 13px; margin-top: 6px; } .fix b { color: var(--accent); }
   .empty { padding: 28px 16px; text-align: center; color: var(--muted); }
-  aside { padding: 0 24px 30px; }
-  .cta { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; }
-  .cta h3 { margin: 0 0 6px; font-size: 14px; }
-  .cta p { margin: 4px 0; color: var(--muted); font-size: 13px; }
-  .measure { font-family: var(--mono); font-size: 12px; color: var(--text); }
-  .measure .up { color: var(--medium); }
+  aside { padding: 0 24px 30px; } .cta { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; }
+  .cta h3 { margin: 0 0 6px; font-size: 14px; } .cta p { margin: 4px 0; color: var(--muted); font-size: 13px; }
+  .measure { font-family: var(--mono); font-size: 12px; color: var(--text); } .measure .up { color: var(--medium); }
   .links { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 8px; font-size: 13px; }
   footer { color: var(--muted); font-size: 12px; padding: 0 24px 28px; }
   code { font-family: var(--mono); background: #0a0f15; border: 1px solid var(--border); border-radius: 4px; padding: 1px 5px; font-size: 12px; }
@@ -73,9 +65,9 @@
 <body>
 <header><div class="wrap">
   <h1>mantle-migrate-lint <span class="dim">· catch → fix → prove</span></h1>
-  <p class="tagline">Catch the Ethereum-L1 assumptions that silently break when a Solidity contract is migrated to <b>Mantle</b> — paste a contract below and the deterministic rules run <b>entirely in your browser</b>.</p>
+  <p class="tagline">Catch the Ethereum-L1 assumptions that silently break when a Solidity contract is migrated to <b>Mantle</b>. Paste a contract — it's <b>compiled with solc 0.8.23 and analyzed on its real AST</b>, entirely in your browser.</p>
   <div class="pillars">
-    <span class="pill active"><b>Catch</b> · live here</span>
+    <span class="pill active"><b>Catch</b> · live here (solc AST)</span>
     <span class="pill"><b>Fix</b> · AI patch via <code>--ai</code> (CLI/CI)</span>
     <span class="pill"><b>Prove</b> · measured on-chain gas (CI)</span>
   </div>
@@ -86,23 +78,26 @@
     <div class="head">
       <span>Solidity input</span>
       <div class="toolbar">
-        <button id="load-vuln">Load vulnerable example</button>
-        <button id="load-clean">Load clean example</button>
+        <button id="load-vuln">Vulnerable example</button>
+        <button id="load-clean">Clean example</button>
         <button id="clear">Clear</button>
-        <button id="scan" class="primary">Scan ⌘↵</button>
+        <button id="scan" class="primary">Compile &amp; analyze ⌘↵</button>
       </div>
     </div>
     <textarea id="src" spellcheck="false" placeholder="// Paste a Solidity contract here…"></textarea>
   </section>
 
   <section class="panel">
-    <div class="summary" id="summary">
+    <div class="summary">
       <span class="count">Findings: <b id="c-total">0</b></span>
       <span class="count" style="color:var(--high)">HIGH <b id="c-high">0</b></span>
       <span class="count" style="color:var(--medium)">MED <b id="c-med">0</b></span>
       <span class="count" style="color:var(--info)">INFO <b id="c-info">0</b></span>
       <span class="gate" id="gate">—</span>
     </div>
+    <div class="status" id="status">Lexical preview — click <b>Compile &amp; analyze</b> to run solc 0.8.23 (AST + gas; ~9 MB compiler loads once).</div>
+    <div class="chips" id="chips"></div>
+    <div class="diags" id="diags"></div>
     <div class="findings" id="findings"></div>
   </section>
 </main>
@@ -110,7 +105,7 @@
 <aside class="wrap">
   <div class="cta">
     <h3>Fix &amp; Prove happen in CI — by design, not in the browser</h3>
-    <p>The deterministic <b>catch</b> engine above is the in-browser part. The other two pillars need a model endpoint and a testnet wallet, so they run in the CLI / GitHub Actions and are proven here:</p>
+    <p>The <b>catch</b> engine above runs here (now on the real solc AST). The other two pillars need a model endpoint and a testnet wallet, so they run in the CLI / GitHub Actions and are proven here:</p>
     <p class="measure"><b>Prove (MNT001, measured on Mantle Sepolia):</b> <code>.transfer()</code> to a contract recipient <span class="up">REVERTS</span>; <code>call{value:}</code> succeeds. Minimal-recipient gasUsed: transfer 31118 vs call 31145.</p>
     <div class="links">
       <a id="lnk-demo" href="#" target="_blank" rel="noopener">▶ End-to-end demo (DEMO.md)</a>
@@ -123,11 +118,12 @@
 </aside>
 
 <footer class="wrap">
-  In-browser rules are a faithful JS port of the canonical Python engine (<code>mantle_lint/</code>), parity-tested against the same fixtures (CleanStaking → 0, VulnerableStaking → 13). Flags risk; not a guarantee of Mantle-safety.
+  In-browser analysis uses the canonical solc AST; rules mirror the canonical Python engine (<code>mantle_lint/</code>) and are parity-tested against the same fixtures (CleanStaking → 0, VulnerableStaking → 13). Snippets that don't compile fall back to a lexical scan. Flags risk; not a guarantee of Mantle-safety.
 </footer>
 
 <script type="module">
-  import { scan, SEVERITY_ORDER } from "./lint.js";
+  import { scan } from "./lint.js";
+  import { analyze } from "./analyze.js";
   import { VULNERABLE, CLEAN } from "./samples.js";
 
   const REPO = "https://github.com/robin11110000/mantle-lint";
@@ -138,52 +134,90 @@
   $("lnk-ai").href = `${REPO}/blob/main/docs/tencent-endpoint.md`;
   $("lnk-repo").href = REPO;
 
-  const esc = (s) => s.replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+  const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
 
-  function render(findings) {
+  // --- solc worker (lazy) ---
+  let worker = null, pending = null;
+  function compileSource(source) {
+    return new Promise((resolve) => {
+      try {
+        if (!worker) {
+          worker = new Worker("./solc-worker.js");
+          worker.onmessage = (e) => { const p = pending; pending = null; if (p) p(e.data); };
+          worker.onerror = () => { const p = pending; pending = null; if (p) p({ ok: false, error: "worker error" }); };
+        }
+        pending = resolve;
+        worker.postMessage({ source });
+      } catch (err) { resolve({ ok: false, error: String(err) }); }
+    });
+  }
+
+  function setStatus(html) { $("status").innerHTML = html; }
+  function renderChips(contracts) {
+    $("chips").innerHTML = (contracts || []).map((c) =>
+      `<span class="chip">${esc(c.name)} · ${c.bytecodeBytes} B · ~${c.creationGas ?? "?"} gas (creation)</span>`).join("");
+  }
+  function renderDiags(diags) {
+    $("diags").innerHTML = (diags || []).slice(0, 12).map((d) =>
+      `<div class="diag ${d.severity === "error" ? "error" : "warning"}">${d.severity}${d.line ? " L" + d.line : ""}: ${esc(d.message)}</div>`).join("");
+  }
+  function renderFindings(findings) {
     const counts = { HIGH: 0, MEDIUM: 0, LOW: 0, INFO: 0 };
     for (const f of findings) counts[f.severity] = (counts[f.severity] || 0) + 1;
     $("c-total").textContent = findings.length;
-    $("c-high").textContent = counts.HIGH;
-    $("c-med").textContent = counts.MEDIUM;
-    $("c-info").textContent = counts.INFO;
-
+    $("c-high").textContent = counts.HIGH; $("c-med").textContent = counts.MEDIUM; $("c-info").textContent = counts.INFO;
     const gate = $("gate");
     if (counts.HIGH > 0) { gate.className = "gate fail"; gate.textContent = "CI gate: FAIL (exit 1)"; }
     else { gate.className = "gate pass"; gate.textContent = "CI gate: pass (exit 0)"; }
-
-    const box = $("findings");
-    if (!findings.length) {
-      box.innerHTML = `<div class="empty">No Mantle migration issues found. ✅</div>`;
-      return;
-    }
-    box.innerHTML = findings.map((f) => `
+    $("findings").innerHTML = findings.length ? findings.map((f) => `
       <div class="finding ${f.severity}">
-        <div class="frow">
-          <span class="sev ${f.severity}">${f.severity}</span>
-          <span class="rid">${f.ruleId}</span>
-          <span class="loc">L${f.line}:${f.col}</span>
-          <span class="ftitle">${esc(f.title)}</span>
-        </div>
+        <div class="frow"><span class="sev ${f.severity}">${f.severity}</span>
+          <span class="rid">${f.ruleId}</span><span class="loc">L${f.line}:${f.col}</span>
+          <span class="ftitle">${esc(f.title)}</span></div>
         <div class="snip">${esc(f.snippet)}</div>
         <div class="why">${esc(f.message)}</div>
         <div class="fix"><b>fix:</b> ${esc(f.recommendation)}</div>
-      </div>`).join("");
+      </div>`).join("") : `<div class="empty">No Mantle migration issues found. ✅</div>`;
   }
 
-  function run() { render(scan($("src").value)); }
+  function runRegex(note) {
+    renderChips([]); renderDiags([]);
+    renderFindings(scan($("src").value));
+    setStatus(note || "Lexical preview — click <b>Compile &amp; analyze</b> for solc AST + gas.");
+  }
 
-  $("load-vuln").addEventListener("click", () => { $("src").value = VULNERABLE; run(); });
-  $("load-clean").addEventListener("click", () => { $("src").value = CLEAN; run(); });
-  $("clear").addEventListener("click", () => { $("src").value = ""; run(); });
-  $("scan").addEventListener("click", run);
-  $("src").addEventListener("keydown", (e) => {
-    if ((e.metaKey || e.ctrlKey) && e.key === "Enter") { e.preventDefault(); run(); }
-  });
+  async function runCompile() {
+    const src = $("src").value;
+    $("scan").disabled = true;
+    setStatus("Loading Solidity compiler &amp; compiling… (first run downloads ~9 MB)");
+    const res = await compileSource(src);
+    $("scan").disabled = false;
+    if (!res || !res.ok) {
+      runRegex(`Compiler unavailable (${esc(res && res.error || "?")}) — showing <b>lexical</b> scan.`);
+      return;
+    }
+    const a = analyze(res.output, src);
+    renderChips(a.contracts);
+    renderDiags(a.diagnostics);
+    if (a.hasError) {
+      renderFindings(scan(src)); // no AST on compile error → lexical fallback for findings
+      setStatus("Compiled with <b>errors</b> (see above) — findings from <b>lexical</b> fallback.");
+    } else {
+      renderFindings(a.findings);
+      setStatus("Compiled with <b>solc 0.8.23</b> — findings from the real <b>AST</b>" +
+        (a.diagnostics.length ? `, ${a.diagnostics.length} compiler warning(s) above.` : "."));
+    }
+  }
 
-  // Prefill with the vulnerable example and scan immediately for an instant demo.
+  $("scan").addEventListener("click", runCompile);
+  $("load-vuln").addEventListener("click", () => { $("src").value = VULNERABLE; runRegex(); });
+  $("load-clean").addEventListener("click", () => { $("src").value = CLEAN; runRegex(); });
+  $("clear").addEventListener("click", () => { $("src").value = ""; runRegex(); });
+  $("src").addEventListener("keydown", (e) => { if ((e.metaKey || e.ctrlKey) && e.key === "Enter") { e.preventDefault(); runCompile(); } });
+
+  // Instant lexical preview on load; Compile & analyze runs solc on demand.
   $("src").value = VULNERABLE;
-  run();
+  runRegex();
 </script>
 </body>
 </html>
