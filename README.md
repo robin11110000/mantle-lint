@@ -1,6 +1,6 @@
 # mantle-migrate-lint
 
-**On every PR, catch the Ethereum-L1 assumptions that break on Mantle, draft the fix, and prove the gas impact with measured on-chain numbers.**
+**Catch the Ethereum-L1 assumptions that break on Mantle, draft the fix, and prove the gas impact with measured on-chain numbers.**
 
 Most contracts "deploy fine" on Mantle because it's EVM-compatible — and then misbehave in production, because a handful of L1 assumptions are no longer true. `mantle-migrate-lint` is one CI-native Mantle DevTool that flags those exact assumptions, explains *why* each breaks on Mantle, drafts a concrete fix, and backs gas-related findings with measured on-chain numbers. It runs in your terminal or as a CI gate, with zero runtime dependencies (just Python 3.8+).
 
@@ -179,7 +179,7 @@ Off by default and stdlib-only, so the core tool's zero-dependency guarantee is 
 |---|---|
 | Optimization / audit output quality (13) | Code-level, Mantle-specific findings with concrete fixes — not generic LLM commentary |
 | Developer productivity impact (10) | Drops into CLI + GitHub PR/CI with SARIF inline annotations, exit-code gating, **and a gas-regression bot that comments measured Mantle gas (MNT001 reference scenarios) on PRs** |
-| Verifiability & benchmarking (10) | Deterministic rules + a reproducible test suite; clean vs. vulnerable fixtures prove signal; **real on-chain Mantle Sepolia measurements** for MNT001 (`--benchmarks`), enforced on PRs by the gas-regression bot |
+| Verifiability & benchmarking (10) | Deterministic rules + a reproducible test suite; clean vs. vulnerable fixtures prove signal; **real on-chain Mantle Sepolia measurements** for MNT001 (`--benchmarks`), reported on PRs by the gas-regression bot |
 | Execution & demo (5) | Runs end-to-end out of the box; **one-command offline demo** (`python scripts/demo.py`, see [DEMO.md](DEMO.md)); reproducible from this README |
 | Tencent Cloud + Mantle integration depth (12) | AI triage layer (`--ai`) annotates each deterministic finding with an exploitability ranking + a reviewable patch, with inference on a **self-hosted, OpenAI-compatible endpoint on Tencent Cloud**. Engine + flag implemented; runbook to go live in [`docs/tencent-endpoint.md`](docs/tencent-endpoint.md), with a `scripts/ai_smoke.py` health check. |
 

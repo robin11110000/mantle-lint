@@ -84,23 +84,33 @@ Target: **Mantle "AI Awakening" (Turing Test Hackathon Phase 2), AI DevTools tra
 scorecards (Part A Mantle-general 50 pts + Part B track-specific 50 pts), plus an
 on-chain benchmarking layer. Builder is solo and time-constrained.
 
-Current build targets these Part B rows: output quality (13), developer
-productivity (10, via CLI + SARIF + CI gate), verifiability (10, via reproducible
-tests + clean/vulnerable fixtures), execution & demo (5).
+Current Part B coverage: output quality (13), developer productivity (10, via CLI +
+SARIF + CI gate + a gas-regression PR bot), verifiability (10, via reproducible
+tests + clean/vulnerable fixtures + real on-chain Mantle Sepolia measurements),
+execution & demo (5, one-command offline demo).
 
-## NEXT STEPS (priority order — these win the remaining points)
+## STATUS — done this build
 
-1. **AI triage layer, inference hosted on Tencent Cloud** — claims the 12-pt
-   "Tencent Cloud + Mantle integration depth" row (currently unaddressed). For each
-   deterministic finding, call an LLM to (a) generate a context-aware patch diff for
-   THIS contract and (b) rank exploitability. Keep deterministic rules as ground
-   truth so the AI augments, never hallucinates — the "beyond generic LLM
-   commentary" bar.
-2. **Real on-chain benchmarking** for gas rules: deploy before/after versions to
-   Mantle Sepolia, attach measured gas deltas to findings.
-3. **AST upgrade** for production-grade coverage.
-4. **Demo:** record an end-to-end run (code in -> findings -> AI patch -> CI gate);
-   confirm reproducibility from the README.
+1. ✅ **AI triage layer (`--ai`)** — per-finding exploitability ranking + reviewable
+   patch via a self-hosted, OpenAI-compatible endpoint; deterministic rules stay
+   ground truth. Built, tested (offline/mocked), and documented (runbook
+   `docs/tencent-endpoint.md` + smoke test `scripts/ai_smoke.py`). NOT yet run
+   against a live Tencent endpoint (no account) — "integration-ready, not
+   proven-live".
+2. ✅ **On-chain benchmarking (MNT001)** — harness deploys before/after to Mantle
+   Sepolia (`benchmarks/`), real receipts in `results.json`; `--benchmarks` attaches
+   numbers to findings; a gas-regression CI bot comments measured deltas on PRs that
+   touch `benchmarks/` (scoped to the MNT001 reference scenarios — see README).
+3. ✅ **Demo** — one-command offline runner `scripts/demo.py` + `DEMO.md`.
+
+## NEXT STEPS (remaining)
+
+4. **Generalize the gas bot to a PR's changed contracts** (deployment-gas / bytecode
+   first cut) — currently scoped to the MNT001 reference scenarios.
+5. **AST upgrade** for production-grade coverage (keep the core zero-dependency;
+   AST stays an optional path).
+6. **Go live on Tencent** if an account/credits become available (run the runbook +
+   `scripts/ai_smoke.py`).
 
 ## Communication preferences
 
