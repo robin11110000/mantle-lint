@@ -187,17 +187,10 @@ The deterministic engine + the `--ai` layer are in place and there's a runbook +
 
 ---
 
-## Roadmap to a full submission (what to add for the win)
+## Roadmap 
 
 1. ✅ **AI explanation/triage layer (`--ai`).** Implemented: for each deterministic finding it generates a context-aware patch diff and ranks exploitability, with the rules kept as ground truth so the AI augments rather than hallucinates. *Remaining:* provision the self-hosted, OpenAI-compatible inference endpoint on Tencent Cloud (HAI/CVM) to claim the 12-pt integration row end-to-end.
 2. ✅ **Real benchmarking.** Implemented for MNT001: a harness deploys before/after contracts to Mantle Sepolia and records real receipts (`benchmarks/`), and `--benchmarks` attaches them to findings. The measured headline is *behavioural* — `.transfer()` to a contract recipient reverts; `call{value:}` succeeds. *Remaining:* extend the harness to MNT002 and the other gas rules.
 3. **Generalize the gas bot to changed contracts (the true "bundle-size bot, but for gas").** Today the gas-regression CI bot benchmarks the committed **MNT001 reference scenarios** and diffs them against the baseline — it does not yet auto-detect and benchmark whatever contracts a PR changes. Closing that gap is deliberate next work, not a hidden gap: runtime gas is path-dependent (it needs to know *how* to call a function), so the tractable first cut is **deployment gas / bytecode size of each changed contract** — a faithful bundle-size analog that needs no invocation — with an optional `benchmark()`-entrypoint (or Foundry gas-snapshot) convention for true runtime gas where a contract provides one.
 4. **AST upgrade (production hardening).** Swap the lexical matcher for a real Solidity AST (`@solidity-parser/parser` or the solc AST). The rule structure is already isolated for this.
 5. **Auto-fix, conservatively.** Some rules (e.g. `transfer` → `call{value:}`) can be auto-rewritten, but blind Solidity rewriting is unsafe (reentrancy ordering), so any auto-fix should emit a reviewable diff, never silently mutate code.
-
-## Honest limitations
-
-- This MVP uses a lexical scanner, not a full AST, so it favors precision on the documented patterns over exhaustive dataflow coverage.
-- The `--ai` triage layer is fully implemented and validated against a local OpenAI-compatible mock, with a runbook + smoke test for a self-hosted Tencent Cloud endpoint — but it has **not yet been run against a live Tencent-hosted endpoint**. It is ready to deploy; treat it as "integration-ready", not "integration-proven-live".
-- Mantle is actively evolving (e.g. the Jan-2026 move toward Ethereum-blob DA / ZK rollup). Treat the fee-mechanic rules (MNT008) as "flag for human review" and confirm exact current behavior against the official Mantle docs before relying on any single fix.
-- It flags risk; it does not guarantee a contract is Mantle-safe. Use it alongside normal testing and audits.
